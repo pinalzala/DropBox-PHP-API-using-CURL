@@ -19,9 +19,7 @@ How to get the example running:
 
 Deploy to your web server
 Make sure the file "tokens" is read+writable(Set Read/Write permission to file) by your web user.
-
 Edit "functions.php" and include your Live Client ID, Secret Key and oAuth callback URL in relevant places.
-
 Hit "mytest.php" and follow the step to login with DropBox!
 
 
