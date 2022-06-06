@@ -18,7 +18,29 @@ class dropbox {
 	// Or leave the second parameter blank for the root directory
 	// Returns an array of the contents of the folder.
 
-	
+	public function getimage($folderid) {
+		$curl = curl_init();
+		
+		curl_setopt_array($curl, array(
+		  CURLOPT_URL => 'https://content.dropboxapi.com/2/files/get_thumbnail_batch',
+		  CURLOPT_RETURNTRANSFER => true,
+		  CURLOPT_ENCODING => '',
+		  CURLOPT_MAXREDIRS => 10,
+		  CURLOPT_TIMEOUT => 0,
+		  CURLOPT_FOLLOWLOCATION => true,
+		  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+		  CURLOPT_CUSTOMREQUEST => 'POST',
+		  CURLOPT_POSTFIELDS =>'{"entries":[{"format":"png","mode":"strict","path":"'.$folderid.'","size":"w64h64"}]}',
+		  CURLOPT_HTTPHEADER => array(
+			'Authorization: Bearer '.$this->access_token,
+			'Content-Type: application/json'
+		  ),
+		));
+		
+		$response = curl_exec($curl);
+		curl_close($curl);
+		return $response = json_decode($response, true);;
+			}
 	public function get_folder_drop($folderid) {
 	
 	if ($folderid === null) {

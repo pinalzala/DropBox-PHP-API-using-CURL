@@ -19,14 +19,19 @@ if (!$token) { ?>
 	// This file is in Dropbox root directory
 	$remotefile = "test.txt";
 	foreach ($response['data'] as $item) {
-		
+		 $re = $sd->getimage($item['source']);
+    
+    $base64 = 'data:image/' . $type[1] . ';base64,' .$re['entries'][0]['thumbnail'];
 	if ($item['type'] == 'folder' || $item['type'] =='album') {
 	// echo 'id==='.$item['id']. 'name--- > '.$item['name'];
 	}else{?>
 	Click on file name to download	<a href="download.php?id=<?php echo $item['id']; ?>"><?php echo $item['name']; ?></a> </br> 
+	
 	<?php } }
 
-
+     ?>
+	 <img src="<?php echo $base64; ?>" width="50" height="50">
+	 <?
 	// Create a new Folder under root directory on Dropbox
 	$newfolder_name = "uploadtest";
 	
