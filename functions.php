@@ -18,15 +18,38 @@ class dropbox {
 	// Or leave the second parameter blank for the root directory
 	// Returns an array of the contents of the folder.
 
-	
+	//get folder list
+	public function getimage($folderid) {
+$curl = curl_init();
+
+curl_setopt_array($curl, array(
+  CURLOPT_URL => 'https://content.dropboxapi.com/2/files/get_thumbnail_batch',
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => '',
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 0,
+  CURLOPT_FOLLOWLOCATION => true,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => 'POST',
+  CURLOPT_POSTFIELDS =>'{"entries":[{"format":"png","mode":"strict","path":"'.$folderid.'","size":"w64h64"}]}',
+  CURLOPT_HTTPHEADER => array(
+    'Authorization: Bearer '.$this->access_token,
+    'Content-Type: application/json'
+  ),
+));
+
+$response = curl_exec($curl);
+curl_close($curl);
+return $response = json_decode($response, true);;
+	}
 	public function get_folder_drop($folderid) {
 	
 	if ($folderid === null) {
 	$data = '{
     "path": "",
-    "recursive": false,
+    "recursive": true,
     "include_media_info": false,
-    "include_deleted": false,
+    "include_deleted": true,
     "include_has_explicit_shared_members": false,
     "include_mounted_folders": false
 	}';
@@ -35,9 +58,9 @@ class dropbox {
 		
 	$data = '{
     "path": "'.$path.'",
-    "recursive": false,
+    "recursive": true,
     "include_media_info": false,
-    "include_deleted": false,
+    "include_deleted": true,
     "include_has_explicit_shared_members": false,
     "include_mounted_folders": false
 	}';
@@ -54,7 +77,6 @@ class dropbox {
 		curl_setopt($ch, CURLOPT_POST, TRUE);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 		$output = curl_exec($ch);
-		
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE); 
 		} catch (Exception $e) {
 		}
@@ -64,7 +86,7 @@ class dropbox {
 			$response = array('error' => 'HTTP status code not expected - got ', 'description' => $httpcode);
 		}
 		
-		if (@array_key_exists('error', $response)) {
+		if (array_key_exists('error', $response)) {
 			throw new Exception($response['error']." - ".$response['description']);
 			exit;
 		} else {
@@ -89,7 +111,7 @@ class dropbox {
 						}else{
 							$type ="";
 						}
-						if(isset($item['size'])){
+						if(isset($item['size'])){ 
 							$size=$item['size'];
 						}else{
 							$size ="";
@@ -120,7 +142,10 @@ class dropbox {
 	// Returns a string containing the pre-signed URL.
 
 	public function get_source_link($fileid) {
+
+         echo $fileid;
 		$response = $this->get_file_properties($fileid);
+		print_r($responses);exit;
 		if (@array_key_exists('error', $response)) {
 			throw new Exception($response['error']." - ".$response['description']);
 			exit;
@@ -168,7 +193,7 @@ class dropbox {
 		
 	}
 	
-	// Deletes an object.
+	// Deletes file.
 
 	function delete_object_drop($fileid) {
 	$token1	= $this->access_token;
@@ -192,8 +217,8 @@ class dropbox {
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		} catch (Exception $e) {
 		}
-		if ($httpcode == "202") {
-		return true;
+		if ($httpcode == "200") {
+			return json_decode($output, true);
 		} else {
 		return array('error' => 'HTTP status code not expected - got ', 'description' => $httpcode);
 		}	
@@ -204,10 +229,12 @@ class dropbox {
 	// Returns a multidimensional array:
 	// ['properties'] contains the file metadata and ['data'] contains the raw file data.
 	
-	
+	//download file
 	public function download_drop($fileid) {
 		$props = $this->get_file_properties($fileid);
 		$response = $this->curl_get("https://content.dropboxapi.com/2/".$fileid."/content?access_token=".$this->access_token, "false", "HTTP/1.1 302 Found");
+
+		
 		$arraytoreturn = Array();
 		if (@array_key_exists('error', $response)) {
 			throw new Exception($response['error']." - ".$response['description']);
@@ -226,8 +253,10 @@ class dropbox {
 	function put_file($folderid, $filename) {
 		$r2s = dropbox_base_url.$folderid."/files/".basename($filename)."?access_token=".$this->access_token;
 		$response = $this->curl_put($r2s, $filename);
+		print_r($response);exit;
 		if (@array_key_exists('error', $response)) {
 			throw new Exception($response['error']." - ".$response['description']);
+
 			exit;
 		} else {
 			return $response;
@@ -243,6 +272,8 @@ class dropbox {
 	 * @param string $folderId - folder you want to send the file to
 	 * @param string $filename - target filename after upload
 	 */
+
+	//upload file
 	function put_file_from_url($sourceUrl, $folderId, $filename){
 		$r2s = dropbox_base_url.$folderId."/files/".$filename."?access_token=".$this->access_token;
 		
@@ -251,7 +282,6 @@ class dropbox {
 		//download file first to tempfile
 		$tempFilename = tempnam("/tmp", "UPLOAD");
 		$temp = fopen($tempFilename, "w");
-		
 		$handle = @fopen($sourceUrl, "rb");
 		if($handle === FALSE){
 			throw new Exception("Unable to download file from " . $sourceUrl);
@@ -282,6 +312,8 @@ class dropbox {
 	// Also pass $foldername as the name for the new folder and $description as the description.
 	// Returns the new folder metadata or throws an exception.
 	
+
+	/// create folder
 	function create_folder_drop($folderid, $foldername, $description="") {
 	$token1	= $this->access_token;		
 		
@@ -291,10 +323,11 @@ if ($folderid === null) {
     "autorename": false
 }';
 	}else{
+
 	$path = $folderid; 	
 		
 	$data = '{
-    "path": "/'.$path.'/'.$foldername.'",
+    "path": "'.$path.'/'.$foldername.'",
     "autorename": false
 }';
 	}
@@ -311,6 +344,7 @@ if ($folderid === null) {
 		curl_setopt($ch, CURLOPT_POST, TRUE);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 		$output = curl_exec($ch);
+		   print_r($response);exit;
 		$err = curl_error($ch);
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		} catch (Exception $e) {
@@ -322,7 +356,9 @@ if ($folderid === null) {
 		}
 	
 	}
-	
+	 
+
+	 //rename folder name
 	function rename_file_folder_drop($folderid, $foldername, $path, $paren_id) {
 	$token	= $this->access_token;
 	
@@ -333,7 +369,7 @@ if ($folderid === null) {
     "from_path": "'.$from_path.'",
     "to_path": "'.$to_path.'",
     "allow_shared_folder": false,
-    "autorename": false,
+    "autorename": true,
     "allow_ownership_transfer": false
 }';
 	
@@ -351,13 +387,13 @@ if ($folderid === null) {
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $data1);
 		$output = curl_exec($ch);
 		$err = curl_error($ch);
-				
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		} catch (Exception $e) {
 		}
 		if ($httpcode == "200") {
 		return json_decode($output, true);
 		} else {
+
 		return array('error' => 'HTTP status code not expected - got ', 'description' => $httpcode);
 		}
 	}
@@ -514,7 +550,7 @@ class dropbox_auth {
 
 	
 	public static function build_oauth_url() {
-		$response = "https://www.dropbox.com/oauth2/authorize?client_id=".client_id2."&response_type=code&state=12345&redirect_uri=".urlencode(callback_uri2);
+		$response = "https://www.dropbox.com/oauth2/authorize?client_id=".client_id2."&token_access_type=offline&response_type=code&state=12345&redirect_uri=".urlencode(callback_uri2);
 		return $response;
 	}
 
@@ -544,7 +580,8 @@ class dropbox_auth {
 		}
 	
 		$out2 = json_decode($output, true);
-		$arraytoreturn = Array('access_token' => $out2['access_token'], 'refresh_token' => $out2['uid'], 'expires_in' => $out2['account_id']);
+
+		$arraytoreturn = Array('access_token' => $out2['access_token'], 'refresh_token' => $out2['refresh_token'], 'expires_in' => $out2['account_id']);
 		return $arraytoreturn;
 	}
 	
@@ -555,29 +592,7 @@ class dropbox_auth {
 	// Pass in the refresh token obtained from a previous oAuth request.
 	// Returns the new oAuth token and an expiry time in seconds from now (usually 3600 but may vary in future).
 	
-	public static function refresh_oauth_token($refresh) {
-		$arraytoreturn = array();
-		$output = "";
-		try {
-			$ch = curl_init();
-			curl_setopt($ch, CURLOPT_URL, "https://api.dropboxapi.com/1/oauth2/token_from_oauth1");
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);	
-			curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-				'Content-Type: application/x-www-form-urlencoded',
-				));
-			curl_setopt($ch, CURLOPT_POST, TRUE);
-			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);		
 
-			$data = "client_id=".client_id1."&redirect_uri=".urlencode(callback_uri1)."&client_secret=".urlencode(client_secret1)."&refresh_token=".$refresh."&grant_type=refresh_token";	
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-			$output = curl_exec($ch);
-		} catch (Exception $e) {
-		}
-	
-		$out2 = json_decode($output, true);
-		$arraytoreturn = Array('access_token' => $out2['access_token'], 'refresh_token' => $out2['refresh_token'], 'expires_in' => $out2['expires_in']);
-		return $arraytoreturn;
-	}
 	
 	
 }
@@ -595,17 +610,61 @@ class dropbox_tokenstore {
 	public static function acquire_token() {
 		
 		$response = dropbox_tokenstore::get_tokens_from_store();
-		if (empty($response['access_token'])) {	// No token at all, needs to go through login flow. Return false to indicate this.
+		if($response['access_token'])
+		{
+			if(time() < $response['access_token_expires'])
+		{
+			return $response['access_token'];
+
+		}
+		else
+		{
+			return dropbox_tokenstore::refresh_oauth_token($response['refresh_token']);
+		}
+		}
+		
+		/*if (empty($response['access_token'])) {	// No token at all, needs to go through login flow. Return false to indicate this.
 			return false;
 			exit;
 		} else {
 				return $response['access_token']; // Token currently valid. Return it.
 				exit;
 			
-		}
+		}*/
 	}
 	
+		public static function refresh_oauth_token($refresh) {
+		$arraytoreturn = array();
+		$output = "";
+		try {
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, "https://api.dropboxapi.com/1/oauth2/token");
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);	
+			curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+				'Content-Type: application/x-www-form-urlencoded',
+				));
+			curl_setopt($ch, CURLOPT_POST, TRUE);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);		
+
+			$data = "client_id=".client_id2."&client_secret=".urlencode(client_secret2)."&refresh_token=".$refresh."&grant_type=refresh_token";	
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+			$output = curl_exec($ch);
+		} catch (Exception $e) {
+		}
 	
+		$out2 = json_decode($output, true);
+		$arraytoreturn = Array('access_token' => $out2['access_token'], 'refresh_token' => $refresh, 'expires_in' => $out2['expires_in']);
+
+
+		$tokentosave = Array();
+		$tokentosave = Array('access_token' => $out2['access_token'], 'refresh_token' => $refresh, 'access_token_expires' => (time()+(int)$out2['expires_in']));
+		if (file_put_contents(token_store, json_encode($tokentosave))) {
+			return true;
+		} else {
+			return false;
+		}
+		return $arraytoreturn;
+	}
 	// get_tokens_from_store()
 	// save_tokens_to_store()
 	// destroy_tokens_in_store()
@@ -642,3 +701,4 @@ class dropbox_tokenstore {
 }
 
 ?>
+
